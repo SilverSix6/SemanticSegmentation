@@ -22,6 +22,16 @@ def kmeans(slic_clusters):
     center1.clear()
     center2.clear()
     center3.clear()
+    for i in range(size):
+        diff1 = ((slic_clusters[i].l - center1_lab[0])**2 + (slic_clusters[i].a - center1_lab[1])**2 + (slic_clusters[i].b - center1_lab[2])**2)**0.5
+        diff2 = ((slic_clusters[i].l - center2_lab[0])**2 + (slic_clusters[i].a - center2_lab[1])**2 + (slic_clusters[i].b - center2_lab[2])**2)**0.5
+        diff3 = ((slic_clusters[i].l - center3_lab[0])**2 + (slic_clusters[i].a - center3_lab[1])**2 + (slic_clusters[i].b - center3_lab[2])**2)**0.5
+        if diff1 < diff2 and diff1 < diff3:
+            center1.append(slic_clusters[i].cid)
+        elif diff2 < diff1 and diff2 < diff3:
+            center2.append(slic_clusters[i].cid)
+        else:
+            center3.append(slic_clusters[i].cid)
         
     # Step 3 move centers to average lab of newly assigned clust
     # Repeat until convergence
