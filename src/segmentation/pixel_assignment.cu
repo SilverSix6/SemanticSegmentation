@@ -11,7 +11,6 @@ __global__ void assign_pixels_kernel(unsigned char *image, Cluster *clusters, in
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-
     if (x >= width || y >= height)
         return;
 
@@ -61,7 +60,7 @@ __global__ void assign_pixels_kernel(unsigned char *image, Cluster *clusters, in
     segmentation_matrix[pixel_index] = best_cluster;
 }
 
-void assign_pixels_to_clusters(unsigned char *image, Cluster *cluster_centers, int *segmentation_matrix,
+void assign_pixels_to_clusters_cuda(unsigned char *image, Cluster *cluster_centers, int *segmentation_matrix,
                                int width, int height, int num_clusters, float m)
 {
     unsigned char *d_image;
@@ -70,17 +69,27 @@ void assign_pixels_to_clusters(unsigned char *image, Cluster *cluster_centers, i
 
     int grid_spacing = (int)sqrt((width * height) / num_clusters);
 
+    if (grid_spacing == 0 || m == 0 || num_clusters == 0) {
+        printf("Invalid inputs in assign_pixel_to_cluster");
+        exit(-1);
+    }
 
-    size_t image_size = width * height * 3 * sizeof(float);
+    size_t image_size = width * height * 3 * sizeof(unsigned char);
     size_t cluster_size = num_clusters * sizeof(Cluster);
     size_t matrix_size = width * height * sizeof(int);
 
-    cudaMalloc(&d_image, image_size);
-    cudaMalloc(&d_clusters, cluster_size);
-    cudaMalloc(&d_segmentation_matrix, matrix_size);
+    cudaError_t err = cudaMalloc(&d_image, image_size);
+    CHECK_CUDA_ERROR(err);
+    err = cudaMalloc(&d_clusters, cluster_size);
+    CHECK_CUDA_ERROR(err);
+    err = cudaMalloc(&d_segmentation_matrix, matrix_size);
+    CHECK_CUDA_ERROR(err);
 
-    cudaMemcpy(d_image, image, image_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_clusters, cluster_centers, cluster_size, cudaMemcpyHostToDevice);
+    err = cudaMemcpy(d_image, image, image_size, cudaMemcpyHostToDevice);
+    CHECK_CUDA_ERROR(err);
+
+    err = cudaMemcpy(d_clusters, cluster_centers, cluster_size, cudaMemcpyHostToDevice);
+    CHECK_CUDA_ERROR(err);
 
     dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE);
     dim3 gridSize((width + BLOCK_SIZE - 1) / BLOCK_SIZE, (height + BLOCK_SIZE - 1) / BLOCK_SIZE);
@@ -89,9 +98,14 @@ void assign_pixels_to_clusters(unsigned char *image, Cluster *cluster_centers, i
                                                   width, height, num_clusters, m, grid_spacing);
     cudaDeviceSynchronize();
 
-    cudaMemcpy(segmentation_matrix, d_segmentation_matrix, matrix_size, cudaMemcpyDeviceToHost);
+    err = cudaMemcpy(segmentation_matrix, d_segmentation_matrix, matrix_size, cudaMemcpyDeviceToHost);
+    CHECK_CUDA_ERROR(err);
+
 
     cudaFree(d_image);
     cudaFree(d_clusters);
     cudaFree(d_segmentation_matrix);
+    d_image = NULL;
+    d_clusters = NULL;
+    d_segmentation_matrix = NULL;
 }

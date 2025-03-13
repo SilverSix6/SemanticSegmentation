@@ -38,12 +38,14 @@ def load_folder_image(folder_path):
     possible_file_paths = sorted(possible_file_paths)
 
     for file in possible_file_paths:
-        full_file_path = os.path.join(folder_path, file)
+        full_file_path = os.path.join(full_folder_path, file)
         # Check if path is a file
         if os.path.isfile(full_file_path):
             file_paths.append(full_file_path)
+        if os.path.isdir(full_file_path):
+            file_paths += load_folder_image(full_file_path)
 
-    return load_list_image(file_paths, True)
+    return file_paths
 
 
 def get_full_path_from_root(path):

@@ -12,10 +12,10 @@ from segmentation.slic import slic
 from utils.segmentation_utils import segmented_to_color, average_images
 
 
-def run_slic_segment():
+def run_single_slic():
     print("Running Segmentation Using SLIC:")
 
-    test_images = ['data/raw/test-images/standard_test_images/fruits.png']
+    test_images = ['src/data/raw/test-images/leftImg8bit/test/berlin/berlin_000000_000019_leftImg8bit.png']
 
     images = load_list_image(test_images, False)
 
@@ -30,15 +30,17 @@ def run_slic_segment():
 
 def slic_operation(image):
     # Show base image
-    num_superpixels = 128
-    m = 20
-    max_iterations = 20
-    threshold = 0
+    num_superpixels = 512
+    m = 1
+    max_iterations = 10
+    threshold = 20
 
     # Perform slic on image
     start_time = time.perf_counter()
     segmented_matrix, cluster_centers = slic(image, num_superpixels,  m, max_iterations, threshold)
     end_time = time.perf_counter()
+
+    print(f'Test Results: {end_time - start_time} seconds')
 
     # Display Input Image
     cv2.imshow('Image', image)
@@ -54,5 +56,5 @@ def slic_operation(image):
     cv2.imshow("Combined Image: ", combined_image)
     cv2.waitKey()
 
-    print(f'Test Results: {end_time - start_time} seconds')
+
     return

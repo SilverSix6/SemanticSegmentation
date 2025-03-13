@@ -37,6 +37,25 @@ def convert_cluster(cluster, cid) -> PyCluster:
         cid = cid
     )
 
+# Load the shared library (adjust the path if necessary)
+libslic = ctypes.CDLL('./segmentation/libslic.so')
+
+# Define the function signature for slic:
+# void slic(unsigned char* image, int width, int height, int num_superpixels,
+#           int max_iterations, float m, float threshold, Cluster *clusters, int *segmented_matrix)
+libslic.slic.argtypes = [
+    ctypes.POINTER(ctypes.c_ubyte),  # image pointer
+    ctypes.c_int,  # width
+    ctypes.c_int,  # height
+    ctypes.c_int,  # num_superpixels
+    ctypes.c_int,  # max_iterations
+    ctypes.c_float,  # m
+    ctypes.c_float,  # threshold
+    ctypes.POINTER(Cluster),  # clusters pointer
+    ctypes.POINTER(ctypes.c_int)  # segmented_matrix pointer
+]
+libslic.slic.restype = None
+
 def slic(image, num_superpixels, m, max_iterations, threshold):
     """
     Performs SLIC superpixel segmentation.
@@ -55,32 +74,12 @@ def slic(image, num_superpixels, m, max_iterations, threshold):
     if channels != 3:
         raise ValueError("Image must have 3 channels (RGB).")
 
-    lab_image = color.rgb2lab(image)
-    lab_image = np.ascontiguousarray(lab_image, dtype=np.uint8)
-    height, width, channels = lab_image.shape
+    image = np.ascontiguousarray(image, dtype=np.uint8)
+    height, width, channels = image.shape
 
     # Flatten the image so it can be passed as a 1D array.
-    image_flat = lab_image.flatten()
+    image_flat = image.flatten()
     image_ptr = image_flat.ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte))
-
-    # Load the shared library (adjust the path if necessary)
-    libslic = ctypes.CDLL('./segmentation/libslic.so')
-
-    # Define the function signature for slic:
-    # void slic(unsigned char* image, int width, int height, int num_superpixels,
-    #           int max_iterations, float m, float threshold, Cluster *clusters, int *segmented_matrix)
-    libslic.slic.argtypes = [
-        ctypes.POINTER(ctypes.c_ubyte),  # image pointer
-        ctypes.c_int,  # width
-        ctypes.c_int,  # height
-        ctypes.c_int,  # num_superpixels
-        ctypes.c_int,  # max_iterations
-        ctypes.c_float,  # m
-        ctypes.c_float,  # threshold
-        ctypes.POINTER(Cluster),  # clusters pointer
-        ctypes.POINTER(ctypes.c_int)  # segmented_matrix pointer
-    ]
-    libslic.slic.restype = None
 
     # Allocate the clusters array (size: num_superpixels)
     clusters_array = (Cluster * num_superpixels)()
