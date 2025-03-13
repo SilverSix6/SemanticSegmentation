@@ -56,3 +56,5 @@ def slic_operation(image):
 
     print(f'Test Results: {end_time - start_time} seconds')
     return
+
+#%%
