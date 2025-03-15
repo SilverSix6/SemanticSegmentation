@@ -70,5 +70,8 @@ def center(cluster,slic_clusters):
         sum_l += slic_clusters[cluster[i]].l
         sum_a += slic_clusters[cluster[i]].a
         sum_b += slic_clusters[cluster[i]].b
-    return [sum_l/len(cluster),sum_a/len(cluster),sum_b/len(cluster)]
+    if len(cluster) == 0:
+        return [0,0,0]
+    else:
+        return [sum_l/len(cluster),sum_a/len(cluster),sum_b/len(cluster)]
     
