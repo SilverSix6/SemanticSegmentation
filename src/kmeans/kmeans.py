@@ -2,7 +2,13 @@
 # performs k-means clustering based on the cluster's average lab color
 # returns the mega clusters
 def kmeans(slic_clusters):
-    # Step 1 Randomly assign 3 or 4 centers at a random l a b
+    """
+    Performs k-means clustering on the slic clusters
+    :param slic_clusters: matrix of slic clusters and their information
+    :return: matrix of mega clusters that contain the cluster ids of the slic clusters
+    """
+    
+    # Step 1 Randomly assign 3 or 4 centers at a random l a b   
     center1 = []
     center2 = []
     center3 = []
@@ -51,6 +57,15 @@ def kmeans(slic_clusters):
     return [center1,center2,center3]
 # calculates center of the cluster's average lab value
 def center(cluster,slic_clusters):
+    """
+    Calculates the center of the cluster's average lab value
+    :param cluster: list of cluster ids
+    :param slic_clusters: matrix of slic clusters and their information
+    :return: list of average lab values
+    """
+    sum_l = 0
+    sum_a = 0
+    sum_b = 0
     for i in range(len(cluster)):
         sum_l += slic_clusters[cluster[i]].l
         sum_a += slic_clusters[cluster[i]].a
