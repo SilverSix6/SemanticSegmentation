@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#include "types.h"
+#include "pixel_assignment.h"
 
 // CUDA kernel for computing distances and assigning pixels to clusters
 __global__ void assign_pixels_kernel(unsigned char *image, Cluster *clusters, int *segmentation_matrix,

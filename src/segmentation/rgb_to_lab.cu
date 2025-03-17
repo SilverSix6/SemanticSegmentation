@@ -2,11 +2,8 @@
 #include <stdio.h>
 #include <math.h>
 
-#include "types.h"
-
-#define X_n 0.95047
-#define Y_n 1.00000
-#define Z_n 1.08883
+#include "rgb_to_lab.h"
+#include "slic.h"
 
 __device__ float xyz_to_lab_fn(float val) {
     if (val > 0.008856) // val > (6 / 29) ** 3
@@ -54,18 +51,22 @@ void convert_rgb_to_lab_cuda(unsigned char *h_image, int width, int height) {
 
     size_t image_size = width * height * 3 * sizeof(unsigned char);
 
+    // Allocate memory on device
     cudaError_t err = cudaMalloc(&d_image, image_size);
     CHECK_CUDA_ERROR(err);
 
+    // Copy image to the device
     err = cudaMemcpy(d_image, h_image, image_size, cudaMemcpyHostToDevice);
     CHECK_CUDA_ERROR(err);
 
     dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE);
     dim3 gridSize((width + BLOCK_SIZE - 1) / BLOCK_SIZE, (height + BLOCK_SIZE - 1) / BLOCK_SIZE);
 
+    // Convert image to lab
     convert_rgb_to_lab_kernel<<<gridSize, blockSize>>>(d_image, width, height);
     cudaDeviceSynchronize();
 
+    // Copy resulting image to host
     err = cudaMemcpy(h_image, d_image, image_size, cudaMemcpyDeviceToHost);
     CHECK_CUDA_ERROR(err);
 

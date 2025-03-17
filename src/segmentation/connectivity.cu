@@ -1,4 +1,4 @@
-#include "types.h"
+#include "slic.h"
 
 // Function to check if a pixel has 4-connectivity
 int is_4_connected(int *image, int height, int width, int x, int y) {
@@ -17,7 +17,7 @@ void enforce_connectivity(int *image, int width, int height) {
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             if (!is_4_connected(image, height, width, x, y)) {
-                int label_counts[MAX_LABELS] = {0}; // Assuming labels range from 0-255
+                int label_counts[MAX_SUPERPIXELS] = {0}; // Assuming labels range from 0-255
                 int max_label = image[y * width + x];
                 int max_count = 0;
 

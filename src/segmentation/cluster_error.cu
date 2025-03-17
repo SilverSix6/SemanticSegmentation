@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#include "types.h"
+#include "cluster_error.h"
 
 __device__ float cluster_difference(Cluster *cluster, Cluster *prev_cluster) {
     return sqrt((cluster->x - prev_cluster->x) * (cluster->x - prev_cluster->x) +
@@ -42,9 +42,6 @@ __global__ void compute_cluster_error_kernel(Cluster *cluster, Cluster *prev_clu
     }
 }
 
-
-
-
 float compute_cluster_error_cuda(Cluster *h_clusters, Cluster *h_prev_clusters, int num_clusters) {
     Cluster *d_clusters;
     Cluster *d_prev_clusters;
@@ -52,6 +49,7 @@ float compute_cluster_error_cuda(Cluster *h_clusters, Cluster *h_prev_clusters, 
 
     int numBlocks = (num_clusters + 255) / 256;
 
+    // Allocate host memory
     h_result = (float *)malloc(numBlocks * sizeof(float));
 
     // Allocate device memory

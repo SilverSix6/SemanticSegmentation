@@ -1,43 +1,27 @@
-#include <cuda_runtime.h>
 #include <stdio.h>
 #include <math.h>
 
-#include "types.h"
-#include "cluster_centers.h"
+#include "slic.h"
+#include "cluster.h"
+#include "cluster_error.h"
 #include "pixel_assignment.h"
 #include "connectivity.h"
 #include "rgb_to_lab.h"
-#include "cluster_error.h"
 
-// Define DEBUG to enable debugging, or comment it out to disable
-// #define DEBUG
-
-#ifdef DEBUG
-#define START_TIMER(event) cudaEventCreate(&event); cudaEventRecord(event)
-#define STOP_TIMER(event, label, iteration)                           \
-    {                                                                 \
-        cudaEvent_t stopEvent;                                        \
-        cudaEventCreate(&stopEvent);                                  \
-        cudaEventRecord(stopEvent);                                   \
-        cudaEventSynchronize(stopEvent);                              \
-        float milliseconds = 0;                                       \
-        cudaEventElapsedTime(&milliseconds, event, stopEvent);        \
-        if (iteration >= 0)                                           \
-            printf("%s (Iteration %d): %.3f ms\n", label, iteration, milliseconds); \
-        else                                                          \
-            printf("%s: %.3f ms\n", label, milliseconds);             \
-        cudaEventDestroy(stopEvent);                                  \
-    }
-#else
-#define START_TIMER(event)
-#define STOP_TIMER(event, label, iteration)
-#endif
-
-void copy_cluster(Cluster *clusters, Cluster *prev_clusters, int num_clusters);
-float compute_cluster_distance(Cluster *cluster, Cluster *prev_cluster);
-float compute_cluster_error(Cluster *cluster, Cluster *prev_cluster, int num_clusters);
-void initialize_cluster_centers(unsigned char *image, int width, int height, Cluster *clusters, int num_superpixels);
-
+/**
+ * Performs Superpixel segmentation using the Simple Linear Iterative Clustering (SLIC) algorithm on
+ * given image. The function groups pixel into superpixels based on color and spatial proximity.
+ * 
+ * @param image: A pointer to the input image. This data should be stored in a 1D array in row-major order. The image is assumed to be RGB.
+ * @param width: The images width (number of pixels)
+ * @param height: The images height (number of pixels)
+ * @param num_superpixels: The total number of superpixels the system will produce. 
+ * @param max_iterations: The number of max number iteration the system will process if the error threshold is not first reached. 
+ * @param m: The compactness factor. Used to balance spatial and color proximity. Higher values enforce spatial uniformity.
+ * @param threshold: The stopping threshold for convergence.
+ * @param clusters: Pointer to array of Cluster structs storing cluster centers. Memory should be pre-allocated.
+ * @param segmented_matrix: Pointer to the output matrix of the same dimentions as the input image. Each pixel is assigned the id of it's superpixel label.
+ */
 extern "C" void slic(unsigned char* image, int width, int height, int num_superpixels, int max_iterations, float m, float threshold, Cluster *clusters, int *segmented_matrix) {
     #ifdef DEBUG
         printf("Debugging enabled. Timing CUDA operations...\n");
@@ -110,29 +94,4 @@ extern "C" void slic(unsigned char* image, int width, int height, int num_superp
 
     free(prev_clusters);
     prev_clusters = NULL;
-}
-
-
-void initialize_cluster_centers(unsigned char *image, int width, int height, Cluster *clusters, int num_superpixels) {
-    int index = 0, pixel_index;
-    int grid_spacing = (int)sqrt((height * width)/ num_superpixels);
-
-    for (int y = grid_spacing / 2; y < height; y += grid_spacing) {
-        for (int x = grid_spacing / 2; x < width; x += grid_spacing) {
-
-            pixel_index = y * width + x;
-
-            clusters[index].l = image[3 * pixel_index];
-            clusters[index].a = image[3 * pixel_index + 1];
-            clusters[index].b = image[3 * pixel_index + 2];
-            clusters[index].x = x;
-            clusters[index].y = y;
-
-            index++;
-        }
-    }
-}
-
-void copy_cluster(Cluster *clusters, Cluster *prev_clusters, int num_clusters) {
-    memcpy(prev_clusters, clusters, num_clusters * sizeof(Cluster));
 }

@@ -1,7 +1,6 @@
+#include "cluster.h"
 #include <cuda_runtime.h>
 #include <stdio.h>
-
-#include "types.h"
 
 // CUDA kernel to reset clusters
 __global__ void resetClusters(Cluster *clusters, int num_clusters) {
@@ -16,9 +15,8 @@ __global__ void resetClusters(Cluster *clusters, int num_clusters) {
     }
 }
 
-// CUDA kernel to update clusters
 __global__ void updateClusters(Cluster *clusters, int num_clusters, int *segmentation_matrix, unsigned char *image, int width, int height) {
-    __shared__ Cluster localClusters[MAX_LABELS];
+    __shared__ Cluster localClusters[MAX_SUPERPIXELS];
     
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -35,6 +33,7 @@ __global__ void updateClusters(Cluster *clusters, int num_clusters, int *segment
         localClusters[tid].n = 0;
     }
     __syncthreads();
+
 
     if (x < width && y < height) {
         int cluster_idx = segmentation_matrix[pixel_index];
@@ -131,4 +130,28 @@ void compute_cluster_centers_cuda(Cluster *h_clusters, int *h_segmentation_matri
     d_clusters = NULL;
     d_segmentation_matrix = NULL;
     d_image = NULL;
+}
+
+void initialize_cluster_centers(unsigned char *image, int width, int height, Cluster *clusters, int num_superpixels) {
+    int index = 0, pixel_index;
+    int grid_spacing = (int)sqrt((height * width)/ num_superpixels);
+
+    for (int y = grid_spacing / 2; y < height; y += grid_spacing) {
+        for (int x = grid_spacing / 2; x < width; x += grid_spacing) {
+
+            pixel_index = y * width + x;
+
+            clusters[index].l = image[3 * pixel_index];
+            clusters[index].a = image[3 * pixel_index + 1];
+            clusters[index].b = image[3 * pixel_index + 2];
+            clusters[index].x = x;
+            clusters[index].y = y;
+
+            index++;
+        }
+    }
+}
+
+void copy_cluster(Cluster *clusters, Cluster *prev_clusters, int num_clusters) {
+    memcpy(prev_clusters, clusters, num_clusters * sizeof(Cluster));
 }
