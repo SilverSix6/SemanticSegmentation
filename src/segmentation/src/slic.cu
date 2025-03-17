@@ -9,7 +9,7 @@
 #include "rgb_to_lab.h"
 
 /**
- * Performs Superpixel segmentation using the Simple Linear Iterative Clustering (SLIC) algorithm on
+ * Performs Superpixel segmentation using the Simple Linear Iterative Clustering (SLIC) algorithm on a
  * given image. The function groups pixel into superpixels based on color and spatial proximity.
  * 
  * @param image: A pointer to the input image. This data should be stored in a 1D array in row-major order. The image is assumed to be RGB.

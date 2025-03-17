@@ -3,7 +3,8 @@ from dataclasses import dataclass
 
 from skimage import color
 import numpy as np
-
+import os
+import platform
 
 # Define the Cluster structure (with x, y, l, a, b as floats and n as int)
 class Cluster(ctypes.Structure):
@@ -38,7 +39,10 @@ def convert_cluster(cluster, cid) -> PyCluster:
     )
 
 # Load the shared library (adjust the path if necessary)
-libslic = ctypes.CDLL('./segmentation/libslic.so')
+if platform.system() == "Windows":
+    libslic = ctypes.CDLL(os.path.abspath("./segmentation/libcudaSLIC.dll"))
+else:
+    libslic = ctypes.CDLL(os.path.abspath("./segmentation/libcudaSLIC.so"))
 
 # Define the function signature for slic:
 # void slic(unsigned char* image, int width, int height, int num_superpixels,

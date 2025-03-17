@@ -1,6 +1,12 @@
 #ifndef SLIC_H
 #define SLIC_H
 
+#ifdef _WIN32
+    #define EXPORT __declspec(dllexport)
+#else
+    #define EXPORT
+#endif
+
 struct Cluster {
     float x, y, l, a, b;
     int n;
@@ -54,6 +60,6 @@ struct Cluster {
  * @param clusters: Pointer to array of Cluster structs storing cluster centers. Memory should be pre-allocated.
  * @param segmented_matrix: Pointer to the output matrix of the same dimentions as the input image. Each pixel is assigned the id of it's superpixel label.
  */
-extern "C" void slic(unsigned char* image, int width, int height, int num_superpixels, int max_iterations, float m, float threshold, Cluster *clusters, int *segmented_matrix);
+extern "C" EXPORT void slic(unsigned char* image, int width, int height, int num_superpixels, int max_iterations, float m, float threshold, Cluster *clusters, int *segmented_matrix);
 
 #endif

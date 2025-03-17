@@ -9,7 +9,7 @@ def main():
     max_iterations = 10
     threshold = 20
 
-    run_single_slic("src/data/raw/test-images/leftImg8bit/test/berlin/berlin_000000_000019_leftImg8bit.png", num_superpixels, m, max_iterations, threshold)
+    run_single_slic("data/raw/test-images/standard_test_images/fruits.png", num_superpixels, m, max_iterations, threshold)
     # run_full_slic("src/data/raw/test-images/leftImg8bit/train", num_superpixels, m, max_iterations, threshold)
 
 
