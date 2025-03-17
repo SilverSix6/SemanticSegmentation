@@ -1,1 +1,1 @@
-nvcc -o libslic.so -shared -Xcompiler -fPIC  -arch=sm_75 slic.cu cluster_centers.cu cluster_error.cu connectivity.cu pixel_assignment.cu rgb_to_lab.cu
+nvcc -o libslic.so -shared -Xcompiler -fPIC  -arch=sm_75 slic.cu cluster.cu cluster_error.cu connectivity.cu pixel_assignment.cu rgb_to_lab.cu

@@ -9,7 +9,14 @@ int is_4_connected(int *image, int height, int width, int x, int y) {
            (x < width - 1 && image[y * width + x + 1] == label);
 }
 
-// Function to enforce 4-connectivity
+/**
+ * Enforces connectivity of pixels. Assigns pixels to be its most common neighboor. 
+ * If there is a tie, the resulting label is randomly choosen between the tieing groups.
+ * 
+ * @param image: A segmented image.
+ * @param width: The image's width (number of pixels)
+ * @param height: The image's height (number of pixels) 
+ */
 void enforce_connectivity(int *image, int width, int height) {
     int dx[] = {-1, 1, 0, 0}; // Left, Right, Up, Down
     int dy[] = {0, 0, -1, 1};

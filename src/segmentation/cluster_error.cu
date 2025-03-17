@@ -28,6 +28,7 @@ __global__ void compute_cluster_error_kernel(Cluster *cluster, Cluster *prev_clu
 
     __syncthreads(); // Sync Block threads
 
+    // Reduce the error between the clusters
     for (int s = blockDim.x / 2; s > 0; s >>= 1) {
         if (tid < s) {
             subResult[tid] += subResult[tid + s];
@@ -42,6 +43,13 @@ __global__ void compute_cluster_error_kernel(Cluster *cluster, Cluster *prev_clu
     }
 }
 
+/**
+ * Computes the difference between the current and previous cluster spatial and color information.
+ * 
+ * @param h_clusters: A pointer to the current cluster array
+ * @param h_prev_clusters: A pointer to the cluster array from the previous iteration
+ * @param num_clusters: The number of clusters in both arrays. 
+ */
 float compute_cluster_error_cuda(Cluster *h_clusters, Cluster *h_prev_clusters, int num_clusters) {
     Cluster *d_clusters;
     Cluster *d_prev_clusters;

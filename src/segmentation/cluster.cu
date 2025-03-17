@@ -15,8 +15,8 @@ __global__ void resetClusters(Cluster *clusters, int num_clusters) {
     }
 }
 
-__global__ void updateClusters(Cluster *clusters, int num_clusters, int *segmentation_matrix, unsigned char *image, int width, int height) {
-    __shared__ Cluster localClusters[MAX_SUPERPIXELS];
+__global__ void updateClusters(Cluster *clusters, int num_clusters, int *segmented_matrix, unsigned char *image, int width, int height) {
+    __shared__ extern Cluster localClusters[];
     
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -34,9 +34,9 @@ __global__ void updateClusters(Cluster *clusters, int num_clusters, int *segment
     }
     __syncthreads();
 
-
+    // Add pixels space and color value to it's corresponding clsuter based on the segmented matrix label
     if (x < width && y < height) {
-        int cluster_idx = segmentation_matrix[pixel_index];
+        int cluster_idx = segmented_matrix[pixel_index];
 
         if (cluster_idx >= 0 && cluster_idx < num_clusters) {
             atomicAdd(&localClusters[cluster_idx].x, (float)x);
@@ -76,8 +76,18 @@ __global__ void normalizeClusters(Cluster *clusters, int num_clusters) {
     }
 }
 
-// Host function to launch kernels
-void compute_cluster_centers_cuda(Cluster *h_clusters, int *h_segmentation_matrix, unsigned char *h_image, int width, int height, int num_clusters, int m) {
+/**
+ * Computes a cluster's average spatial and color information based on it's pixels. 
+ * 
+ * @param h_clusters: A pointer to an array of clusters
+ * @param h_segmented_matrix: A pointer to each pixel's cluster id. 
+ * @param h_image: A pointer to the input image. This data should be stored in a 1D array in row-major order. The image is assumed to be in LAB color space.
+ * @param width: The width of the image (number of pixels)
+ * @param height: The height of the image (number of pixels)
+ * @param num_clusters: The number of clusters in the h_clusters array
+ * @param m: The compactness factor. Used to balance spatial and color proximity. Higher values enforce spatial uniformity.
+ */
+void compute_cluster_centers_cuda(Cluster *h_clusters, int *h_segmented_matrix, unsigned char *h_image, int width, int height, int num_clusters, int m) {
     Cluster *d_clusters;
     int *d_segmentation_matrix;
     unsigned char *d_image;
@@ -96,7 +106,7 @@ void compute_cluster_centers_cuda(Cluster *h_clusters, int *h_segmentation_matri
     err = cudaMemcpy(d_clusters, h_clusters, num_clusters * sizeof(Cluster), cudaMemcpyHostToDevice);
     CHECK_CUDA_ERROR(err);
 
-    err = cudaMemcpy(d_segmentation_matrix, h_segmentation_matrix, width * height * sizeof(int), cudaMemcpyHostToDevice);
+    err = cudaMemcpy(d_segmentation_matrix, h_segmented_matrix, width * height * sizeof(int), cudaMemcpyHostToDevice);
     CHECK_CUDA_ERROR(err);
 
     err = cudaMemcpy(d_image, h_image, 3 * width * height * sizeof(unsigned char), cudaMemcpyHostToDevice);
@@ -112,7 +122,7 @@ void compute_cluster_centers_cuda(Cluster *h_clusters, int *h_segmentation_matri
     cudaDeviceSynchronize();
 
     // Update clusters
-    updateClusters<<<gridDim, blockDim>>>(d_clusters, num_clusters, d_segmentation_matrix, d_image, width, height);
+    updateClusters<<<gridDim, blockDim, num_clusters * sizeof(Cluster)>>>(d_clusters, num_clusters, d_segmentation_matrix, d_image, width, height);
     cudaDeviceSynchronize();
 
     // Normalize clusters
@@ -132,9 +142,18 @@ void compute_cluster_centers_cuda(Cluster *h_clusters, int *h_segmentation_matri
     d_image = NULL;
 }
 
-void initialize_cluster_centers(unsigned char *image, int width, int height, Cluster *clusters, int num_superpixels) {
+/**
+ * Initializes a grid of clusters over the width of the image. The clusters are spaced evenly based on the image's size and the number of clusters.
+ * 
+ * @param image: A pointer to the input image. This data should be stored in a 1D array in row-major order. The image is assumed to be in LAB color space.
+ * @param width: The width of the image (number of pixels)
+ * @param height: The height of the image (number of pixels)
+ * @param clusters: A pointer to an array of Clusters. This shoud be preallocated memory the size of num_clusters.
+ * @param num_clusters: The size of the clusters array. 
+ */
+void initialize_cluster_centers(unsigned char *image, int width, int height, Cluster *clusters, int num_clusters) {
     int index = 0, pixel_index;
-    int grid_spacing = (int)sqrt((height * width)/ num_superpixels);
+    int grid_spacing = (int)sqrt((height * width)/ num_clusters);
 
     for (int y = grid_spacing / 2; y < height; y += grid_spacing) {
         for (int x = grid_spacing / 2; x < width; x += grid_spacing) {
@@ -152,6 +171,13 @@ void initialize_cluster_centers(unsigned char *image, int width, int height, Clu
     }
 }
 
+/**
+ * Copys the cluster data from one array to another array. 
+ * 
+ * @param clusters: A pointer to an array of clusters
+ * @param prev_clusters: A pointer to where the current cluster will be copied to.
+ * @param num_clusters: The size of clusters array. clusters and prev_clusters should be the same size.
+ */
 void copy_cluster(Cluster *clusters, Cluster *prev_clusters, int num_clusters) {
     memcpy(prev_clusters, clusters, num_clusters * sizeof(Cluster));
 }
