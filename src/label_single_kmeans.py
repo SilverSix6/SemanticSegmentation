@@ -1,4 +1,4 @@
-from src.utils.segmentation_utils import load_matrix, load_cluster
+from src.utils.serialize import read_clusters, read_matrix
 
 def run_single_kmeans():
     
@@ -8,10 +8,10 @@ def run_single_kmeans():
         print("Files loaded")
         
         # Load the matrix and cluster
-        matrix = load_matrix(matrix_file)
-        cluster = load_cluster(cluster_file)
+        matrix = read_matrix(matrix_file)
+        cluster = read_clusters(cluster_file)
         
-        
+        # Do kmeans on super pixels
         
     finally:
         matrix_file.close()
