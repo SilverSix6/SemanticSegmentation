@@ -1,4 +1,5 @@
 import numpy as np
+import cv2
 
 def segmented_to_color(segmented_matrix, cluster_centers):
     """
@@ -21,6 +22,27 @@ def segmented_to_color(segmented_matrix, cluster_centers):
         color_image[segmented_matrix == cluster.cid] = colors[cluster.cid]
 
     return color_image
+
+
+def segmented_to_average_color(segmented_matrix, cluster_centers):
+    """
+    Convert a segmented matrix into a color image by assigning the average Lab color to each cluster ID.
+
+    :param segmented_matrix: np.ndarray of shape (m, n) containing cluster IDs
+    :param cluster_centers: List of clusters, each having attributes l, a, and b for Lab color values
+    :return: np.ndarray of shape (m, n, 3) representing a color image in BGR color space
+    """
+    # Create a color image in Lab space
+    color_image_lab = np.zeros((*segmented_matrix.shape, 3), dtype=np.uint8)
+
+    # Assign the average Lab color to each cluster ID
+    for cluster in cluster_centers:
+        color_image_lab[segmented_matrix == cluster.cid] = [cluster.l, cluster.a, cluster.b]
+
+    # Convert from Lab to BGR for display
+    color_image_lab = np.clip(color_image_lab, 0, 255).astype(np.uint8)
+
+    return color_image_lab
 
 
 def average_images(image1, image2):
