@@ -13,8 +13,7 @@ def run_single_kmeans():
         cluster = read_clusters(cluster_file)
 
         # Do kmeans on super pixels
-        kmeans_cluster(matrix,cluster)
-        print("kmeans ran")
+        mega_clusters = kmeans_cluster(matrix,cluster)
         
     finally:
         matrix_file.close()
