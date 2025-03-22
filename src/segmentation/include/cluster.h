@@ -25,7 +25,7 @@ void compute_cluster_centers_cuda(Cluster *h_clusters, int *h_segmentation_matri
  * @param clusters: A pointer to an array of Clusters. This shoud be preallocated memory the size of num_clusters.
  * @param num_clusters: The size of the clusters array. 
  */
-void initialize_cluster_centers(unsigned char *image, int width, int height, Cluster *clusters, int num_superpixels);
+void initialize_cluster_centers_cuda(unsigned char *d_image, int width, int height, Cluster *d_clusters, int num_clusters) ;
 
 /**
  * Copys the cluster data from the current iteration to previous iteration. 
@@ -34,6 +34,6 @@ void initialize_cluster_centers(unsigned char *image, int width, int height, Clu
  * @param prev_clusters: A pointer to where the current cluster will be copied to.
  * @param num_clusters: The size of clusters array. clusters and prev_clusters should be the same size.
  */
-void copy_cluster(Cluster *clusters, Cluster *prev_clusters, int num_clusters);
+void copy_cluster_cuda(Cluster *clusters, Cluster *prev_clusters, int num_clusters);
 
 #endif

@@ -50,9 +50,8 @@ __global__ void compute_cluster_error_kernel(Cluster *cluster, Cluster *prev_clu
  * @param h_prev_clusters: A pointer to the cluster array from the previous iteration
  * @param num_clusters: The number of clusters in both arrays. 
  */
-float compute_cluster_error_cuda(Cluster *h_clusters, Cluster *h_prev_clusters, int num_clusters) {
-    Cluster *d_clusters;
-    Cluster *d_prev_clusters;
+float compute_cluster_error_cuda(Cluster *d_clusters, Cluster *d_prev_clusters, int num_clusters) {
+
     float *d_result, *h_result;
 
     int numBlocks = (num_clusters + 255) / 256;
@@ -61,17 +60,7 @@ float compute_cluster_error_cuda(Cluster *h_clusters, Cluster *h_prev_clusters, 
     h_result = (float *)malloc(numBlocks * sizeof(float));
 
     // Allocate device memory
-    cudaError_t err = cudaMalloc(&d_clusters, num_clusters * sizeof(Cluster));
-    CHECK_CUDA_ERROR(err);
-    err = cudaMalloc(&d_prev_clusters, num_clusters * sizeof(Cluster));
-    CHECK_CUDA_ERROR(err);
-    err = cudaMalloc(&d_result, numBlocks * sizeof(float));
-    CHECK_CUDA_ERROR(err);
-
-    // Copy cluster data to device
-    err = cudaMemcpy(d_clusters, h_clusters, num_clusters * sizeof(Cluster), cudaMemcpyHostToDevice);
-    CHECK_CUDA_ERROR(err);
-    err = cudaMemcpy(d_prev_clusters, h_prev_clusters, num_clusters * sizeof(Cluster), cudaMemcpyHostToDevice);
+    cudaError_t err = cudaMalloc(&d_result, numBlocks * sizeof(float));
     CHECK_CUDA_ERROR(err);
 
     // Launch Kernel
@@ -88,12 +77,8 @@ float compute_cluster_error_cuda(Cluster *h_clusters, Cluster *h_prev_clusters, 
     }
 
     // Clean up memory
-    cudaFree(d_clusters);
-    cudaFree(d_prev_clusters);
     cudaFree(d_result);
     free(h_result);
-    d_clusters = NULL;
-    d_prev_clusters = NULL;
     d_result = NULL;
     h_result = NULL;
 

@@ -51,19 +51,7 @@ __global__ void convert_rgb_to_lab_kernel(unsigned char *image, int width, int h
  * @param width: The width of the image (number of pixels)
  * @param height: The height of the image (number of pixels)
  */
-void convert_rgb_to_lab_cuda(unsigned char *h_image, int width, int height) {
-
-    unsigned char *d_image;
-
-    size_t image_size = width * height * 3 * sizeof(unsigned char);
-
-    // Allocate memory on device
-    cudaError_t err = cudaMalloc(&d_image, image_size);
-    CHECK_CUDA_ERROR(err);
-
-    // Copy image to the device
-    err = cudaMemcpy(d_image, h_image, image_size, cudaMemcpyHostToDevice);
-    CHECK_CUDA_ERROR(err);
+void convert_rgb_to_lab_cuda(unsigned char *d_image, int width, int height) {
 
     dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE);
     dim3 gridSize((width + BLOCK_SIZE - 1) / BLOCK_SIZE, (height + BLOCK_SIZE - 1) / BLOCK_SIZE);
@@ -72,12 +60,6 @@ void convert_rgb_to_lab_cuda(unsigned char *h_image, int width, int height) {
     convert_rgb_to_lab_kernel<<<gridSize, blockSize>>>(d_image, width, height);
     cudaDeviceSynchronize();
 
-    // Copy resulting image to host
-    err = cudaMemcpy(h_image, d_image, image_size, cudaMemcpyDeviceToHost);
-    CHECK_CUDA_ERROR(err);
-
-    cudaFree(d_image);
-    d_image = NULL;
 }
 
 

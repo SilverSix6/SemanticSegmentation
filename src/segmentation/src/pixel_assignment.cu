@@ -72,54 +72,21 @@ __global__ void assign_pixels_kernel(unsigned char *image, Cluster *clusters, in
  * @param num_clusters: The number of clusters 
  * @param m: The compactness factor. Used to balance spatial and color proximity. Higher values enforce spatial uniformity.
  */
-void assign_pixels_to_clusters_cuda(unsigned char *image, Cluster *cluster_centers, int *segmented_matrix,
+void assign_pixels_to_clusters_cuda(unsigned char *d_image, Cluster *d_cluster_centers, int *d_segmented_matrix,
                                int width, int height, int num_clusters, float m)
 {
-    unsigned char *d_image;
-    Cluster *d_clusters;
-    int *d_segmentation_matrix;
-
     int grid_spacing = (int)sqrt((width * height) / num_clusters);
     if (grid_spacing == 0 || m == 0 || num_clusters == 0) {
         printf("Invalid inputs in assign_pixel_to_cluster");
         exit(-1);
     }
 
-    size_t image_size = width * height * 3 * sizeof(unsigned char);
-    size_t cluster_size = num_clusters * sizeof(Cluster);
-    size_t matrix_size = width * height * sizeof(int);
-
-    // Allocate memory on device
-    cudaError_t err = cudaMalloc(&d_image, image_size);
-    CHECK_CUDA_ERROR(err);
-    err = cudaMalloc(&d_clusters, cluster_size);
-    CHECK_CUDA_ERROR(err);
-    err = cudaMalloc(&d_segmentation_matrix, matrix_size);
-    CHECK_CUDA_ERROR(err);
-
-    // Copy image and current cluster to the device
-    err = cudaMemcpy(d_image, image, image_size, cudaMemcpyHostToDevice);
-    CHECK_CUDA_ERROR(err);
-    err = cudaMemcpy(d_clusters, cluster_centers, cluster_size, cudaMemcpyHostToDevice);
-    CHECK_CUDA_ERROR(err);
-
     dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE);
     dim3 gridSize((width + BLOCK_SIZE - 1) / BLOCK_SIZE, (height + BLOCK_SIZE - 1) / BLOCK_SIZE);
     
     // Assign pixels to the nearest cluster
-    assign_pixels_kernel<<<gridSize, blockSize>>>(d_image, d_clusters, d_segmentation_matrix,
+    assign_pixels_kernel<<<gridSize, blockSize>>>(d_image, d_cluster_centers, d_segmented_matrix,
                                                   width, height, num_clusters, m, grid_spacing);
     cudaDeviceSynchronize();
 
-    // Copy result to ouput buffer
-    err = cudaMemcpy(segmented_matrix, d_segmentation_matrix, matrix_size, cudaMemcpyDeviceToHost);
-    CHECK_CUDA_ERROR(err);
-    
-    // Clean up
-    cudaFree(d_image);
-    cudaFree(d_clusters);
-    cudaFree(d_segmentation_matrix);
-    d_image = NULL;
-    d_clusters = NULL;
-    d_segmentation_matrix = NULL;
 }

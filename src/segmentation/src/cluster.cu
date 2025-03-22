@@ -87,31 +87,7 @@ __global__ void normalizeClusters(Cluster *clusters, int num_clusters) {
  * @param num_clusters: The number of clusters in the h_clusters array
  * @param m: The compactness factor. Used to balance spatial and color proximity. Higher values enforce spatial uniformity.
  */
-void compute_cluster_centers_cuda(Cluster *h_clusters, int *h_segmented_matrix, unsigned char *h_image, int width, int height, int num_clusters, int m) {
-    Cluster *d_clusters;
-    int *d_segmentation_matrix;
-    unsigned char *d_image;
-
-    // Allocate device memory
-    cudaError_t err = cudaMalloc(&d_clusters, num_clusters * sizeof(Cluster));
-    CHECK_CUDA_ERROR(err);
-    err = cudaMalloc(&d_segmentation_matrix, width * height * sizeof(int));
-    CHECK_CUDA_ERROR(err);
-
-    err = cudaMalloc(&d_image, 3 * width * height * sizeof(unsigned char));
-    CHECK_CUDA_ERROR(err);
-
-
-    // Copy data to device
-    err = cudaMemcpy(d_clusters, h_clusters, num_clusters * sizeof(Cluster), cudaMemcpyHostToDevice);
-    CHECK_CUDA_ERROR(err);
-
-    err = cudaMemcpy(d_segmentation_matrix, h_segmented_matrix, width * height * sizeof(int), cudaMemcpyHostToDevice);
-    CHECK_CUDA_ERROR(err);
-
-    err = cudaMemcpy(d_image, h_image, 3 * width * height * sizeof(unsigned char), cudaMemcpyHostToDevice);
-    CHECK_CUDA_ERROR(err);
-
+void compute_cluster_centers_cuda(Cluster *d_clusters, int *d_segmented_matrix, unsigned char *d_image, int width, int height, int num_clusters, int m) {
 
     // Kernel launch parameters
     dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
@@ -122,24 +98,35 @@ void compute_cluster_centers_cuda(Cluster *h_clusters, int *h_segmented_matrix, 
     cudaDeviceSynchronize();
 
     // Update clusters
-    updateClusters<<<gridDim, blockDim, num_clusters * sizeof(Cluster)>>>(d_clusters, num_clusters, d_segmentation_matrix, d_image, width, height);
+    updateClusters<<<gridDim, blockDim, num_clusters * sizeof(Cluster)>>>(d_clusters, num_clusters, d_segmented_matrix, d_image, width, height);
     cudaDeviceSynchronize();
 
     // Normalize clusters
     normalizeClusters<<<(num_clusters + 255) / 256, 256>>>(d_clusters, num_clusters);
     cudaDeviceSynchronize();
 
-    // Copy results back to host
-    err = cudaMemcpy(h_clusters, d_clusters, num_clusters * sizeof(Cluster), cudaMemcpyDeviceToHost);
-    CHECK_CUDA_ERROR(err);
+}
 
-    // Free device memory
-    cudaFree(d_clusters);
-    cudaFree(d_segmentation_matrix);
-    cudaFree(d_image);
-    d_clusters = NULL;
-    d_segmentation_matrix = NULL;
-    d_image = NULL;
+__global__ void initialize_cluster_centers(unsigned char *image, int width, int height, Cluster *clusters, int num_clusters) {
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index >= num_clusters) return;
+
+    int grid_spacing = (int)sqrtf((float)(height * width) / num_clusters);
+    int grid_x = index % (width / grid_spacing);
+    int grid_y = index / (width / grid_spacing);
+
+    int x = grid_spacing / 2 + grid_x * grid_spacing;
+    int y = grid_spacing / 2 + grid_y * grid_spacing;
+    
+    if (x >= width || y >= height) return;
+    
+    int pixel_index = (y * width + x) * 3; // LAB is stored as 3 bytes per pixel
+
+    clusters[index].l = image[pixel_index];
+    clusters[index].a = image[pixel_index + 1];
+    clusters[index].b = image[pixel_index + 2];
+    clusters[index].x = x;
+    clusters[index].y = y;
 }
 
 /**
@@ -151,25 +138,13 @@ void compute_cluster_centers_cuda(Cluster *h_clusters, int *h_segmented_matrix, 
  * @param clusters: A pointer to an array of Clusters. This shoud be preallocated memory the size of num_clusters.
  * @param num_clusters: The size of the clusters array. 
  */
-void initialize_cluster_centers(unsigned char *image, int width, int height, Cluster *clusters, int num_clusters) {
-    int index = 0, pixel_index;
-    int grid_spacing = (int)sqrt((height * width)/ num_clusters);
-
-    for (int y = grid_spacing / 2; y < height; y += grid_spacing) {
-        for (int x = grid_spacing / 2; x < width; x += grid_spacing) {
-
-            pixel_index = y * width + x;
-
-            clusters[index].l = image[3 * pixel_index];
-            clusters[index].a = image[3 * pixel_index + 1];
-            clusters[index].b = image[3 * pixel_index + 2];
-            clusters[index].x = x;
-            clusters[index].y = y;
-
-            index++;
-        }
-    }
+void initialize_cluster_centers_cuda(unsigned char *d_image, int width, int height, Cluster *d_clusters, int num_clusters) {
+    int threadsPerBlock = 256;
+    int blocksPerGrid = (num_clusters + threadsPerBlock - 1) / threadsPerBlock;
+    initialize_cluster_centers<<<blocksPerGrid, threadsPerBlock>>>(d_image, width, height, d_clusters, num_clusters);
+    cudaDeviceSynchronize(); // Ensure the kernel completes before returning
 }
+
 
 /**
  * Copys the cluster data from one array to another array. 
@@ -178,6 +153,6 @@ void initialize_cluster_centers(unsigned char *image, int width, int height, Clu
  * @param prev_clusters: A pointer to where the current cluster will be copied to.
  * @param num_clusters: The size of clusters array. clusters and prev_clusters should be the same size.
  */
-void copy_cluster(Cluster *clusters, Cluster *prev_clusters, int num_clusters) {
-    memcpy(prev_clusters, clusters, num_clusters * sizeof(Cluster));
+void copy_cluster_cuda(Cluster *d_clusters, Cluster *d_prev_clusters, int num_clusters) {
+    cudaMemcpy(d_prev_clusters, d_clusters, num_clusters * sizeof(Cluster), cudaMemcpyDeviceToDevice);
 }

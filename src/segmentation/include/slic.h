@@ -13,7 +13,7 @@ struct Cluster {
 };
 
 #define BLOCK_SIZE 32 // Define block size for CUDA kernels
-#define MAX_SUPERPIXELS 1024 // Set hard limit for number 
+#define MAX_SUPERPIXELS 4096 // Set hard limit for number
 
 #define CHECK_CUDA_ERROR(err) { \
     if (err != cudaSuccess) { \
