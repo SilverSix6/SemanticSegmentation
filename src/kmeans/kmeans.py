@@ -1,60 +1,53 @@
 # Takes in the clusters of superpixels from the slic algorithm 
 # performs k-means clustering based on the cluster's average lab color
 # returns the mega clusters
-def kmeans(slic_clusters):
+from xmlrpc.client import MAXINT
+
+
+def kmeans(slic_clusters, threshold, target_clusters):
     """
     Performs k-means clustering on the slic clusters
+    :param target_clusters:
+    :param threshold:
     :param slic_clusters: matrix of slic clusters and their information
     :return: matrix of mega clusters that contain the cluster ids of the slic clusters
     """
-    
-    # Step 1 Randomly assign 3 or 4 centers at a random l a b   
-    center1 = []
-    center2 = []
-    center3 = []
-    size = len(slic_clusters)
-    for i in range(size):
-        if i % 3 == 0:
-            center1.append(slic_clusters[i].cid)
-        elif i % 3 == 1:
-            center2.append(slic_clusters[i].cid)
-        else:
-            center3.append(slic_clusters[i].cid)
-    
+
+    cluster_groups = [[] for _ in range(target_clusters)]
+
+    # Randomly assign cluster to cluster groups
+    slic_cluster_size = len(slic_clusters)
+    for i in range(slic_cluster_size):
+        cluster_groups[i % target_clusters].append(slic_clusters[i])
+
+    old_centers_lab = []
+
     # assign values outside of the range for the first iteration of old centers to ensure a second loop
-    old_center1 = [-1,-1,-1]
-    old_center2 = [-1,-1,-1]
-    old_center3 = [-1,-1,-1]
-    # contintue until convergence
-    not_converged = True
-    while(not_converged):
-        # calculate the new average lab color of each cluster
-        center1_lab = center(center1,slic_clusters)
-        center2_lab = center(center2,slic_clusters)
-        center3_lab = center(center3,slic_clusters)           
-        # Step 2 compare the slic cluster average color to find the closest difference with the centers
-        center1.clear()
-        center2.clear()
-        center3.clear()
-        for i in range(size):
-            diff1 = ((slic_clusters[i].l - center1_lab[0])**2 + (slic_clusters[i].a - center1_lab[1])**2 + (slic_clusters[i].b - center1_lab[2])**2)**0.5
-            diff2 = ((slic_clusters[i].l - center2_lab[0])**2 + (slic_clusters[i].a - center2_lab[1])**2 + (slic_clusters[i].b - center2_lab[2])**2)**0.5
-            diff3 = ((slic_clusters[i].l - center3_lab[0])**2 + (slic_clusters[i].a - center3_lab[1])**2 + (slic_clusters[i].b - center3_lab[2])**2)**0.5
-            if diff1 < diff2 and diff1 < diff3:
-                center1.append(slic_clusters[i].cid)
-            elif diff2 < diff1 and diff2 < diff3:
-                center2.append(slic_clusters[i].cid)
-            else:
-                center3.append(slic_clusters[i].cid)
-        # Step 3 check for convergence
-        if center1_lab == old_center1 and center2_lab == old_center2 and center3_lab == old_center3:
-            not_converged = False
-        else:
-            old_center1 = center1_lab
-            old_center2 = center2_lab
-            old_center3 = center3_lab
-    # Return the mega clusters
-    return [center1,center2,center3]
+    for i in range(target_clusters):
+        old_centers_lab.append([-1000, -1000, -1000])
+
+    # continue until convergence
+    while True:
+
+        centers_lab = []
+        # calculate the new average lab color of each cluster group
+        for i in range(target_clusters):
+            centers_lab.append(center(cluster_groups[i], slic_clusters))
+            cluster_groups[i].clear()
+
+        # loop over each slic cluster find the closest cluster group
+        for j in range(slic_cluster_size):
+            # If closest assign slic cluster to the cluster group
+            id = closestClusterID(slic_clusters[j], centers_lab)
+            cluster_groups[id].append(slic_clusters[j])
+
+        # Check for convergence
+        if converged(old_centers_lab, centers_lab, threshold):
+            return cluster_groups, centers_lab
+
+        # Update old centers
+        old_centers_lab = centers_lab.copy()
+
 # calculates center of the cluster's average lab value
 def center(cluster,slic_clusters):
     """
@@ -67,11 +60,35 @@ def center(cluster,slic_clusters):
     sum_a = 0
     sum_b = 0
     for i in range(len(cluster)):
-        sum_l += slic_clusters[cluster[i]].l
-        sum_a += slic_clusters[cluster[i]].a
-        sum_b += slic_clusters[cluster[i]].b
+        sum_l += slic_clusters[cluster[i].cid].l
+        sum_a += slic_clusters[cluster[i].cid].a
+        sum_b += slic_clusters[cluster[i].cid].b
     if len(cluster) == 0:
         return [0,0,0]
     else:
         return [sum_l/len(cluster),sum_a/len(cluster),sum_b/len(cluster)]
-    
+
+
+def closestClusterID(slic_cluster, centers_lab):
+
+    min_diff_idx = -1
+    min_diff = float("inf")
+
+    for i in range(len(centers_lab)):
+        diff = (slic_cluster.l - centers_lab[i][0])**2 + (slic_cluster.a - centers_lab[i][1])**2 + (slic_cluster.b - centers_lab[i][2])**2
+
+        if diff < min_diff:
+            min_diff = diff
+            min_diff_idx = i
+
+    return min_diff_idx
+
+
+def converged(old_centers, centers_lab, threshold):
+
+    sum = 0
+
+    for i in range(len(centers_lab)):
+        sum += (old_centers[i][0] - centers_lab[i][0])**2 + (old_centers[i][1] - centers_lab[i][1])**2 + (old_centers[i][2] - centers_lab[i][2])**2
+
+    return sum < threshold
