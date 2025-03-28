@@ -12,7 +12,7 @@ def main():
 
     # run_single_slic("data/raw/test-images/standard_test_images/fruits.png", num_superpixels, m, max_iterations, threshold)
     # run_full_slic("src/data/raw/test-images/leftImg8bit/train", num_superpixels, m, max_iterations, threshold)
-    run_single_kmeans()
+    run_single_kmeans(threshold, 6)
 
 
 if __name__ == "__main__":

@@ -9,17 +9,14 @@ def get_random_colors(n):
     """Generate a list of n random colors in hexadecimal format."""
     return [f"#{randint(0, 0xFFFFFF):06x}" for _ in range(n)]
 
-def run_single_kmeans(threshold, target_clusters):
+def run_full_kmeans(threshold, target_clusters):
 
     try:
-
         matrix_file = open("data/slic/full_slic_matrix.bin", "rb")
         cluster_file = open("data/slic/full_slic_cluster.bin", "rb")
         print("Files loaded")
 
         # Load the matrix and cluster
-
-
         matrix = read_matrix(matrix_file)
         cluster = read_clusters(cluster_file)
 
@@ -27,7 +24,6 @@ def run_single_kmeans(threshold, target_clusters):
         mega_clusters, mega_clusters_lab = kmeans(cluster, threshold, target_clusters)
 
         # Display results
-        
         # Original image
         image = load_single_image('data/raw/aachen_000000_000019_leftImg8bit.png')
         # Plot the image
