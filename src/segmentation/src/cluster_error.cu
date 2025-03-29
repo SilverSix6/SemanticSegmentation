@@ -4,7 +4,7 @@
 
 #include "cluster_error.h"
 
-__device__ float cluster_difference(Cluster *cluster, Cluster *prev_cluster) {
+__host__ __device__ float cluster_difference(Cluster *cluster, Cluster *prev_cluster) {
     return sqrt((cluster->x - prev_cluster->x) * (cluster->x - prev_cluster->x) +
         (cluster->y - prev_cluster->y) * (cluster->y - prev_cluster->y) +
         (cluster->l - prev_cluster->l) * (cluster->l - prev_cluster->l) +
@@ -83,4 +83,21 @@ float compute_cluster_error_cuda(Cluster *d_clusters, Cluster *d_prev_clusters, 
     h_result = NULL;
 
     return finalResult;
+}
+
+/**
+ * Computes the difference between the current and previous cluster spatial and color information.
+ * 
+ * @param h_clusters: A pointer to the current cluster array
+ * @param h_prev_clusters: A pointer to the cluster array from the previous iteration
+ * @param num_clusters: The number of clusters in both arrays. 
+ */
+float compute_cluster_error_cpu(Cluster *clusters, Cluster *prev_clusters, int num_clusters) {
+    int sum = 0;
+
+    for (int i = 0; i < num_clusters; i++) {
+        sum += cluster_difference(&clusters[i], &prev_clusters[i]);
+    }
+
+    return sum;
 }

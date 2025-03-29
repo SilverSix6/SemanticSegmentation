@@ -10,7 +10,7 @@
 
 /**
  * Performs Superpixel segmentation using the Simple Linear Iterative Clustering (SLIC) algorithm on a
- * given image. The function groups pixel into superpixels based on color and spatial proximity.
+ * given image using CUDA functions. The function groups pixel into superpixels based on color and spatial proximity.
  * 
  * @param image: A pointer to the input image. This data should be stored in a 1D array in row-major order. The image is assumed to be RGB.
  * @param width: The images width (number of pixels)
@@ -22,10 +22,7 @@
  * @param clusters: Pointer to array of Cluster structs storing cluster centers. Memory should be pre-allocated.
  * @param segmented_matrix: Pointer to the output matrix of the same dimentions as the input image. Each pixel is assigned the id of it's superpixel label.
  */
-extern "C" void slic(unsigned char* image, int width, int height, int num_superpixels, int max_iterations, float m, float threshold, Cluster *clusters, int *segmented_matrix) {
-    cudaEvent_t event1;
-    START_TIMER(event1);
-
+extern "C" void slic_gpu(unsigned char* image, int width, int height, int num_superpixels, int max_iterations, float m, float threshold, Cluster *clusters, int *segmented_matrix) {
     unsigned char *d_image;
     Cluster *d_clusters, *d_prev_clusters;
     int *d_segmented_matrix;
@@ -33,9 +30,14 @@ extern "C" void slic(unsigned char* image, int width, int height, int num_superp
     #ifdef DEBUG
         printf("Debugging enabled. Timing CUDA operations...\n");
     #endif
+
     
     int deviceCount;
     cudaEvent_t event;
+    cudaEvent_t totalEvent;
+    cudaEvent_t iterationEvent;
+    
+    START_TIMER_SIMPLE(totalEvent);
 
     // Validate Inputs
     if (image == NULL || clusters == NULL || segmented_matrix == NULL || max_iterations <= 0 || m <= 0) {
@@ -92,7 +94,10 @@ extern "C" void slic(unsigned char* image, int width, int height, int num_superp
     int iterations = 0;
     float error = threshold + 1;  // Ensure at least one iteration
 
+    
     while (iterations < max_iterations && error >= threshold) {
+        START_TIMER_SIMPLE(iterationEvent);
+
         // Compute new cluster centers
         START_TIMER(event);
         compute_cluster_centers_cuda(d_clusters, d_segmented_matrix, d_image, width, height, num_superpixels, m);
@@ -113,6 +118,8 @@ extern "C" void slic(unsigned char* image, int width, int height, int num_superp
         copy_cluster_cuda(d_clusters, d_prev_clusters, num_superpixels);
         STOP_TIMER(event, "Time for copy_cluster", iterations);
 
+
+        STOP_TIMER_SIMPLE(iterationEvent, "Iteration Processing Time");
         iterations++;
     }
 
@@ -126,6 +133,9 @@ extern "C" void slic(unsigned char* image, int width, int height, int num_superp
     enforce_connectivity(segmented_matrix, width, height);
     STOP_TIMER(event, "Time for enforce_connectivity", -1);
 
+
+    STOP_TIMER_SIMPLE(totalEvent, "Total Processing Time");
+
     cudaFree(d_image);
     cudaFree(d_clusters);
     cudaFree(d_prev_clusters);
@@ -134,6 +144,100 @@ extern "C" void slic(unsigned char* image, int width, int height, int num_superp
     d_clusters = NULL;
     d_prev_clusters = NULL;
     d_segmented_matrix = NULL;
+}
 
-    STOP_TIMER(event1, "Whole algorithm", -1);
+/**
+ * Performs Superpixel segmentation using the Simple Linear Iterative Clustering (SLIC) algorithm on a
+ * given image using the CPU. The function groups pixel into superpixels based on color and spatial proximity.
+ * 
+ * @param image: A pointer to the input image. This data should be stored in a 1D array in row-major order. The image is assumed to be RGB.
+ * @param width: The images width (number of pixels)
+ * @param height: The images height (number of pixels)
+ * @param num_superpixels: The total number of superpixels the system will produce. 
+ * @param max_iterations: The number of max number iteration the system will process if the error threshold is not first reached. 
+ * @param m: The compactness factor. Used to balance spatial and color proximity. Higher values enforce spatial uniformity.
+ * @param threshold: The stopping threshold for convergence.
+ * @param clusters: Pointer to array of Cluster structs storing cluster centers. Memory should be pre-allocated.
+ * @param segmented_matrix: Pointer to the output matrix of the same dimentions as the input image. Each pixel is assigned the id of it's superpixel label.
+ */
+extern "C" void slic_cpu(unsigned char* image, int width, int height, int num_superpixels, int max_iterations, float m, float threshold, Cluster *clusters, int *segmented_matrix) {    
+    #ifdef DEBUG
+        printf("Debugging enabled. Timing CUDA operations...\n");
+    #endif
+    
+    cudaEvent_t event;
+    cudaEvent_t totalEvent;
+    cudaEvent_t iterationEvent;
+
+    START_TIMER_SIMPLE(totalEvent);
+
+    // Validate Inputs
+    if (image == NULL || clusters == NULL || segmented_matrix == NULL || max_iterations <= 0 || m <= 0) {
+        printf("Invalid Arguments");
+        return;
+    }
+
+    size_t cluster_size = num_superpixels * sizeof(Cluster);    
+    Cluster *prev_clusters = (Cluster *) malloc(cluster_size);
+
+    // Convert image from RGB to LAB
+    START_TIMER(event);
+    convert_rgb_to_lab_cpu(image, width, height);
+    STOP_TIMER(event, "Time for convert_rgb_to_lab_cuda", -1);
+
+    // Initialize clusters
+    START_TIMER(event);
+    initialize_cluster_centers_cpu(image, width, height, clusters, num_superpixels);
+    STOP_TIMER(event, "Time for initialize_cluster_centers", -1);
+
+    // Copy clusters
+    START_TIMER(event);
+    copy_cluster_cpu(clusters, prev_clusters, num_superpixels);
+    STOP_TIMER(event, "Time for copy_cluster_cuda (initial)", -1);
+
+    // Assign pixels to clusters
+    START_TIMER(event);
+    assign_pixels_to_clusters_cpu(image, clusters, segmented_matrix, width, height, num_superpixels, m);
+    STOP_TIMER(event, "Time for assign_pixels_to_clusters_cuda (initial)", -1);
+
+    int iterations = 0;
+    float error = threshold + 1;  // Ensure at least one iteration
+
+    while (iterations < max_iterations && error >= threshold) {
+        START_TIMER_SIMPLE(iterationEvent);
+        
+        // Compute new cluster centers
+        START_TIMER(event);
+        compute_cluster_centers_cpu(clusters, segmented_matrix, image, width, height, num_superpixels, m);
+        STOP_TIMER(event, "Time for compute_cluster_centers_cuda", iterations);
+
+        // Assign pixels to clusters
+        START_TIMER(event);
+        assign_pixels_to_clusters_cpu(image, clusters, segmented_matrix, width, height, num_superpixels, m);
+        STOP_TIMER(event, "Time for assign_pixels_to_clusters_cuda", iterations);
+
+        // Compute error
+        START_TIMER(event);
+        error = compute_cluster_error_cpu(clusters, prev_clusters, num_superpixels);
+        STOP_TIMER(event, "Time for compute_cluster_error_cuda", iterations);
+
+        // Copy clusters
+        START_TIMER(event);
+        copy_cluster_cpu(clusters, prev_clusters, num_superpixels);
+        STOP_TIMER(event, "Time for copy_cluster", iterations);
+
+        STOP_TIMER_SIMPLE(iterationEvent, "Iteration Processing Time");
+
+        iterations++;
+    }
+
+    // Enforce connectivity
+    START_TIMER(event);
+    enforce_connectivity(segmented_matrix, width, height);
+    STOP_TIMER(event, "Time for enforce_connectivity", -1);
+
+    STOP_TIMER_SIMPLE(totalEvent, "Total Processing Time");
+
+    free(prev_clusters);
+    prev_clusters = NULL;
 }

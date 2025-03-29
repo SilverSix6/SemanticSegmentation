@@ -47,7 +47,7 @@ else:
 # Define the function signature for slic:
 # void slic(unsigned char* image, int width, int height, int num_superpixels,
 #           int max_iterations, float m, float threshold, Cluster *clusters, int *segmented_matrix)
-libslic.slic.argtypes = [
+libslic.slic_gpu.argtypes = [
     ctypes.POINTER(ctypes.c_ubyte),  # image pointer
     ctypes.c_int,  # width
     ctypes.c_int,  # height
@@ -58,9 +58,22 @@ libslic.slic.argtypes = [
     ctypes.POINTER(Cluster),  # clusters pointer
     ctypes.POINTER(ctypes.c_int)  # segmented_matrix pointer
 ]
-libslic.slic.restype = None
+libslic.slic_cpu.restype = None
 
-def slic(image, num_superpixels, m, max_iterations, threshold):
+libslic.slic_cpu.argtypes = [
+    ctypes.POINTER(ctypes.c_ubyte),  # image pointer
+    ctypes.c_int,  # width
+    ctypes.c_int,  # height
+    ctypes.c_int,  # num_superpixels
+    ctypes.c_int,  # max_iterations
+    ctypes.c_float,  # m
+    ctypes.c_float,  # threshold
+    ctypes.POINTER(Cluster),  # clusters pointer
+    ctypes.POINTER(ctypes.c_int)  # segmented_matrix pointer
+]
+libslic.slic_cpu.restype = None
+
+def slic(image, num_superpixels, m, max_iterations, threshold, gpu):
     """
     Performs SLIC superpixel segmentation.
 
@@ -92,17 +105,30 @@ def slic(image, num_superpixels, m, max_iterations, threshold):
     segmented_matrix_array = (ctypes.c_int * (width * height))()
 
     # Call the slic function from the shared library
-    libslic.slic(
-        image_ptr,
-        width,
-        height,
-        num_superpixels,
-        max_iterations,
-        ctypes.c_float(m),
-        ctypes.c_float(threshold),
-        clusters_array,
-        segmented_matrix_array
-    )
+    if gpu:
+        libslic.slic_gpu(
+            image_ptr,
+            width,
+            height,
+            num_superpixels,
+            max_iterations,
+            ctypes.c_float(m),
+            ctypes.c_float(threshold),
+            clusters_array,
+            segmented_matrix_array
+        )
+    else:
+        libslic.slic_cpu(
+            image_ptr,
+            width,
+            height,
+            num_superpixels,
+            max_iterations,
+            ctypes.c_float(m),
+            ctypes.c_float(threshold),
+            clusters_array,
+            segmented_matrix_array
+        )
 
     # Convert the segmented matrix back to a NumPy array and reshape it to (height, width)
     segmentation_matrix = np.ctypeslib.as_array(segmented_matrix_array)

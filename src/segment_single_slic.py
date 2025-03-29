@@ -7,13 +7,13 @@ from utils.segmentation_utils import segmented_to_color, average_images
 
 
 
-def run_single_slic(image_path, num_superpixels, m, max_iterations, threshold):
+def run_single_slic(image_path, num_superpixels, m, max_iterations, threshold, gpu):
 
     image = load_single_image(image_path)
 
     # Perform slic on image
     start_time = time.perf_counter()
-    segmented_matrix, cluster_centers = slic(image, num_superpixels,  m, max_iterations, threshold)
+    segmented_matrix, cluster_centers = slic(image, num_superpixels,  m, max_iterations, threshold, gpu)
     end_time = time.perf_counter()
 
     print(f'Test Results: {end_time - start_time} seconds')
@@ -32,5 +32,4 @@ def run_single_slic(image_path, num_superpixels, m, max_iterations, threshold):
     plt.imshow(combined_image)
     plt.show()
 
-    image.close()
     return
