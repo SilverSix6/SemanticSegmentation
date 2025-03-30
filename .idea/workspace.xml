@@ -5,12 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b9cde3cc-7ad5-4188-9a27-c580133d1071" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/label_full_kmeans.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/raw/aachen_000000_000019_leftImg8bit.png" beforeDir="false" afterPath="$PROJECT_DIR$/data/raw/aachen_000000_000019_leftImg8bit.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/kmeans/kmeans.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/kmeans/kmeans.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/label_single_kmeans.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/label_single_kmeans.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -34,7 +30,7 @@
     "Python.main.executor": "Debug",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "Merging kmeans",
+    "git-widget-placeholder": "kmeans",
     "ignore.virus.scanning.warn.message": "true",
     "last_opened_file_path": "/Users/bethralston/Desktop/School/School 2025/COSC444/Project.nosync/SemanticSegmentation",
     "node.js.detected.package.eslint": "true",
@@ -103,6 +99,17 @@
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
@@ -118,29 +125,16 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/label_single_kmeans.py</url>
-          <line>29</line>
-          <option name="timeStamp" value="6" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/src/label_single_kmeans.py</url>
-          <line>50</line>
-          <option name="timeStamp" value="7" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/src/label_single_kmeans.py</url>
-          <line>22</line>
-          <option name="timeStamp" value="10" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/src/label_single_kmeans.py</url>
-          <line>23</line>
-          <option name="timeStamp" value="11" />
+          <line>40</line>
+          <option name="timeStamp" value="12" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
     <watches-manager>
       <configuration name="PythonConfigurationType">
         <watch expression="image_ptr" language="Python" />
+        <watch expression="cluster" />
+        <watch expression="cluster[0]" />
       </configuration>
     </watches-manager>
   </component>
