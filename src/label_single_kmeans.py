@@ -1,4 +1,7 @@
 from random import randint
+import os
+
+from networkx.algorithms.reciprocity import overall_reciprocity
 
 from src.kmeans.kmeans import kmeans
 from utils.serialize import read_clusters, read_matrix
@@ -21,6 +24,10 @@ def get_error(mega_clusters,gt,slic_matrix):
         # Histogram of labels within this mega cluster
         label_counts = Counter(ground_truth_labels)
         all_cluster_labels.append(label_counts)
+        if not label_counts:
+            print(f"Warning: Mega Cluster {idx + 1} has no labels associated with it.")
+            mega_clusters_percentage.append(0)  # Default to 0 if no labels found
+            continue
         dominant = max(label_counts.values())
         count_sum = sum(label_counts.values())
         percentage = dominant/count_sum
@@ -33,7 +40,6 @@ def get_error(mega_clusters,gt,slic_matrix):
         plt.xlabel("Label")
         plt.ylabel("Frequency")
         plt.show(block=True)
-
     return mega_clusters_percentage
 
 def get_random_colors(n):
@@ -47,19 +53,28 @@ def run_single_kmeans(threshold, target_clusters):
         matrix_file = open("data/slic/full_slic_matrix.bin", "rb")
         cluster_file = open("data/slic/full_slic_cluster.bin", "rb")
         print("Files loaded")
+        # Get 10 images
+        image_dir = "/Users/bethralston/Desktop/School/School 2025/COSC444/Project.nosync/SemanticSegmentation/src/data/raw/test-images/leftImg8bit/train/aachen/"
+        gt_dir = "/Users/bethralston/Desktop/School/School 2025/COSC444/Project.nosync/SemanticSegmentation/src/data/raw/test-images/gtFine/train/aachen/"
+        image_files = sorted([f for f in os.listdir(image_dir) if f.endswith(".png")])[:10]  # Pick first 10 images
+        gt_files = sorted([f for f in os.listdir(gt_dir) if f.endswith("gtFine_labelIds.png")])[:10]
+        # run through all 10 images
+        for image_file,gt_file in zip(image_files, gt_files):
 
-        for x in range(10):
             # Load the matrix and cluster
             matrix = read_matrix(matrix_file)
             cluster = read_clusters(cluster_file)
+            overall_percentages = []
+            # Load image and ground truth
+            image_path = os.path.join(image_dir, image_file)
+            gt_path = os.path.join(gt_dir, gt_file)
+            image = load_single_image(image_path)
+            gt = load_single_image(gt_path)
 
             # Do kmeans on super pixels
             mega_clusters, mega_clusters_lab = kmeans(cluster, threshold, target_clusters)
 
             # Display results
-
-            # Original image
-            image = load_single_image('/Users/bethralston/Desktop/School/School 2025/COSC444/Project.nosync/SemanticSegmentation/src/data/raw/test-images/leftImg8bit/train/aachen/aachen_000000_000019_leftImg8bit.png')
 
             # Plot the image
             plt.figure(figsize=(10, 6))
@@ -78,9 +93,16 @@ def run_single_kmeans(threshold, target_clusters):
             plt.legend()
             plt.title("K-Means Clustering on Superpixels")
             plt.show(block=True)
-            gt = load_single_image('/Users/bethralston/Desktop/School/School 2025/COSC444/Project.nosync/SemanticSegmentation/src/data/raw/test-images/gtFine/train/aachen/aachen_000000_000019_gtFine_labelIds.png')
-            get_error(mega_clusters,gt,matrix)
+            percentages = get_error(mega_clusters,gt,matrix)
+            overall_percentages.append(percentages)
 
+        # Box plot after processing all images
+        plt.figure()
+        plt.boxplot(overall_percentages)
+        plt.title("Dominant Label Percentage Across 10 Images")
+        plt.xlabel("Image Index")
+        plt.ylabel("Dominant Label Percentage")
+        plt.show()
     finally:
         matrix_file.close()
         cluster_file.close()
