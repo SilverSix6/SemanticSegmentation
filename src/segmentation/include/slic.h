@@ -13,7 +13,7 @@ struct Cluster {
 };
 
 #define BLOCK_SIZE 32 // Define block size for CUDA kernels
-#define MAX_SUPERPIXELS 1024 // Set hard limit for number 
+#define MAX_SUPERPIXELS 4096 // Set hard limit for number
 
 #define CHECK_CUDA_ERROR(err) { \
     if (err != cudaSuccess) { \
@@ -23,7 +23,27 @@ struct Cluster {
 }
 
 // Define DEBUG to enable debugging, or comment it out to disable
-#define DEBUG
+// Define DEBUG for more limited debugging
+// #define DEBUG
+#define DEBUG_SIMPLE
+
+#ifdef DEBUG_SIMPLE
+#define START_TIMER_SIMPLE(event) cudaEventCreate(&event); cudaEventRecord(event)
+#define STOP_TIMER_SIMPLE(event, label)                           \
+    {                                                                 \
+        cudaEvent_t stopEvent;                                        \
+        cudaEventCreate(&stopEvent);                                  \
+        cudaEventRecord(stopEvent);                                   \
+        cudaEventSynchronize(stopEvent);                              \
+        float milliseconds = 0;                                       \
+        cudaEventElapsedTime(&milliseconds, event, stopEvent);        \
+        printf("%s: %.3f ms\n", label, milliseconds);                 \
+        cudaEventDestroy(stopEvent);                                  \
+    }
+#else
+#define START_TIMER_SIMPLE(event)
+#define STOP_TIMER_SIMPLE(event, label)
+#endif
 
 #ifdef DEBUG
 #define START_TIMER(event) cudaEventCreate(&event); cudaEventRecord(event)
