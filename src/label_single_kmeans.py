@@ -1,8 +1,7 @@
 from random import randint
 import os
-
+from tabulate import tabulate
 from networkx.algorithms.reciprocity import overall_reciprocity
-
 from src.kmeans.kmeans import kmeans
 from utils.serialize import read_clusters, read_matrix
 import numpy as np
@@ -11,8 +10,8 @@ from src.labeling.image_load_util import load_single_image
 from collections import Counter
 
 def get_error(mega_clusters,gt,slic_matrix):
-    all_cluster_labels = []
-    mega_clusters_percentage = []
+    all_cluster_labels = [] # all labels from the clusters
+    mega_clusters_percentage = [] # all of the mega clusters error percentage
     for idx, mega_cluster in enumerate(mega_clusters):
         ground_truth_labels = []
 
@@ -33,13 +32,14 @@ def get_error(mega_clusters,gt,slic_matrix):
         percentage = dominant/count_sum
         mega_clusters_percentage.append(percentage)
 
-        # Display the histogram for this mega cluster
-        plt.figure()
-        plt.bar(label_counts.keys(), label_counts.values())
-        plt.title(f"Histogram for Mega Cluster {idx + 1}")
-        plt.xlabel("Label")
-        plt.ylabel("Frequency")
-        plt.show(block=True)
+        # # Display the histogram for this mega cluster
+        # plt.figure()
+        # plt.bar(label_counts.keys(), label_counts.values())
+        # plt.title(f"Histogram for Mega Cluster {idx + 1}")
+        # plt.xlabel("Label")
+        # plt.ylabel("Frequency")
+        # plt.show()
+
     return mega_clusters_percentage
 
 def get_random_colors(n):
@@ -59,12 +59,13 @@ def run_single_kmeans(threshold, target_clusters):
         image_files = sorted([f for f in os.listdir(image_dir) if f.endswith(".png")])[:10]  # Pick first 10 images
         gt_files = sorted([f for f in os.listdir(gt_dir) if f.endswith("gtFine_labelIds.png")])[:10]
         # run through all 10 images
+        overall_percentages = []
         for image_file,gt_file in zip(image_files, gt_files):
 
             # Load the matrix and cluster
             matrix = read_matrix(matrix_file)
             cluster = read_clusters(cluster_file)
-            overall_percentages = []
+
             # Load image and ground truth
             image_path = os.path.join(image_dir, image_file)
             gt_path = os.path.join(gt_dir, gt_file)
@@ -90,19 +91,33 @@ def run_single_kmeans(threshold, target_clusters):
 
 
             # Add legend and display
-            plt.legend()
+            # plt.legend()
             plt.title("K-Means Clustering on Superpixels")
             plt.show(block=True)
-            percentages = get_error(mega_clusters,gt,matrix)
-            overall_percentages.append(percentages)
+            # percentages = get_error(mega_clusters,gt,matrix)
+            # overall_percentages.append(percentages)
 
-        # Box plot after processing all images
-        plt.figure()
-        plt.boxplot(overall_percentages)
-        plt.title("Dominant Label Percentage Across 10 Images")
-        plt.xlabel("Image Index")
-        plt.ylabel("Dominant Label Percentage")
-        plt.show()
+            percentages = get_error(mega_clusters, gt, matrix)
+            overall_percentages.append([p * 100 for p in percentages])  # Store percentages for all images
+
+        # # After processing all 10 images, plot the box plot
+        # # Transpose overall_percentages to have each image's data in a separate boxplot
+        # transposed_percentages = list(zip(*overall_percentages))
+        # plt.figure(figsize=(10, 6))
+        # plt.boxplot(transposed_percentages, patch_artist=True)
+        # plt.title("Dominant Label Percentage for 6 Images")
+        # plt.xlabel("Image Index")
+        # plt.ylabel("Dominant Label Percentage (%)")
+        # plt.xticks(range(1, 4), [f"Image {i + 1}" for i in range(3)])
+        # plt.grid(True)
+        # plt.show()
+
+        # Calculate and display average percentages
+        # average_percentages = [np.mean(image_data) for image_data in overall_percentages]
+        # table_data = [[f"Image {i + 1}", f"{avg:.2f}%"] for i, avg in enumerate(average_percentages)]
+        # print("\nAverage Dominant Label Percentage per Image:")
+        # print(tabulate(table_data, headers=["Image", "Average Percentage"], tablefmt="grid"))
+
     finally:
         matrix_file.close()
         cluster_file.close()
