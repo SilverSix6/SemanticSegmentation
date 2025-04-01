@@ -38,11 +38,25 @@ def convert_cluster(cluster, cid) -> PyCluster:
         cid = cid
     )
 
-# Load the shared library (adjust the path if necessary)
-if platform.system() == "Windows":
-    libslic = ctypes.CDLL(os.path.abspath("./segmentation/libcudaSLIC.dll"))
-else:
-    libslic = ctypes.CDLL(os.path.abspath("./segmentation/libcudaSLIC.so"))
+
+def slic(image, num_superpixels, m, max_iterations, threshold):
+    """
+    Performs SLIC superpixel segmentation.
+
+    :param image: Input image (numpy array, shape: [height, width, 3], dtype: uint8).
+    :param num_superpixels: Desired number of superpixels.
+    :param m: Compactness parameter balancing color and spatial distance.
+    :param max_iterations: Maximum number of iterations.
+    :param threshold: Convergence threshold.
+    :return: segmentation_matrix (height x width array of cluster assignments),
+             cluster_centers (list of Cluster objects).
+    """
+
+    # Load the shared library (adjust the path if necessary)
+    if platform.system() == "Windows":
+        libslic = ctypes.CDLL(os.path.abspath("./segmentation/libcudaSLIC.dll"))
+    else:
+        libslic = ctypes.CDLL(os.path.abspath("./segmentation/libcudaSLIC.so"))
 
 # Define the function signature for slic:
 # void slic(unsigned char* image, int width, int height, int num_superpixels,

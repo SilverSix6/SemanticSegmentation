@@ -1,6 +1,7 @@
-from src.segment_full_slic import run_full_slic
+from label_single_kmeans import run_single_kmeans
+from segment_full_slic import run_full_slic
 from src.slic_benchmark import run_slic_cpu_vs_gpu, run_slic_image_size
-from src.segment_single_slic import run_single_slic
+from segment_single_slic import run_single_slic
 
 
 def main():
