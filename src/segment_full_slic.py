@@ -34,7 +34,7 @@ def run_full_slic(image_directory, num_superpixels, m, max_iterations, threshold
 
             # Segment Image
             start_time = time.perf_counter()
-            segmented_matrix, cluster_center = slic(image, num_superpixels, m, max_iterations, threshold)
+            segmented_matrix, cluster_center = slic(image, num_superpixels, m, max_iterations, threshold, True)
             end_time = time.perf_counter()
 
             # Save Results

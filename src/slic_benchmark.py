@@ -9,7 +9,7 @@ from src.segmentation.slic import slic
 from src.utils.serialize import write_matrix
 
 
-def run_multi_slic(image_filenames, num_superpixels, m, max_iterations, threshold):
+def run_slic_cpu_vs_gpu(image_filenames, num_superpixels, m, max_iterations, threshold):
     os.makedirs('data/slic/', exist_ok=True)
     matrix_bin_file = "data/slic/full_slic_matrix.bin"
     cluster_bin_file = "data/slic/full_slic_cluster.bin"
@@ -65,6 +65,30 @@ def run_multi_slic(image_filenames, num_superpixels, m, max_iterations, threshol
     finally:
         matrix_file.close()
         cluster_file.close()
+
+    print("DONE")
+
+
+def run_slic_image_size(image_filename, num_sub_divisions, num_superpixels, m, max_iterations, threshold):
+    print("Processing image using SLIC")
+
+    print(f"Running SLIC on 1 image: {image_filename}")
+
+    image = cv2.imread(get_full_path_from_root(image_filename), cv2.IMREAD_COLOR)
+
+    sub_divisions = 0
+    while sub_divisions < num_sub_divisions:
+
+        print(f"\tProcessing image with {sub_divisions} sub divisions. path: {image_filename}")
+
+        # Segment Image
+        segmented_matrix, cluster_center = slic(image, num_superpixels, m, max_iterations, threshold, True)
+
+        # Half the image
+        height, width = image.shape[:2]
+        image = cv2.resize(image, (width // 2, height // 2))
+        sub_divisions += 1
+
 
     print("DONE")
 
